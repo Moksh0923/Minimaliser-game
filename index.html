@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0f1311">
+    <title>Minimaliser Game</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app">
+
+    <!-- START SCREEN (VISIBLE FIRST) -->
+    <section id="startScreen" class="panel start">
+        <p class="eyebrow">Scorekeeper</p>
+        <h1>Minimaliser</h1>
+        <p class="lede">Keep score round by round. The lowest total wins.</p>
+        <button type="button" class="btn btn-primary" onclick="startApp()">Start game</button>
+    </section>
+
+    <!-- MAIN APP (HIDDEN INITIALLY) -->
+    <div id="mainApp" hidden>
+
+        <header class="topbar">
+            <span class="wordmark">Minimaliser</span>
+            <span class="topbar-note">Lowest score wins</span>
+        </header>
+
+        <!-- STEP 1: PLAYER COUNT -->
+        <section id="stepCount" class="panel step">
+            <form id="playerCountForm" novalidate onsubmit="createPlayers(); return false;">
+                <p class="eyebrow">Step 1 of 3</p>
+                <h2 tabindex="-1">Who's playing?</h2>
+
+                <div class="field">
+                    <label for="numPlayers">Number of players</label>
+                    <input type="number" id="numPlayers" min="2" max="12" step="1"
+                           inputmode="numeric" placeholder="e.g. 3" autocomplete="off"
+                           aria-required="true" aria-describedby="numPlayersHint numPlayersError">
+                    <p class="hint" id="numPlayersHint">Between 2 and 12 players.</p>
+                    <p class="error" id="numPlayersError" role="alert"></p>
+                </div>
+
+                <div class="actions">
+                    <button type="submit" class="btn btn-primary">Continue</button>
+                </div>
+            </form>
+        </section>
+
+        <!-- STEP 2: PLAYER NAMES -->
+        <section id="stepNames" class="panel step" hidden>
+            <form id="playersForm" novalidate onsubmit="savePlayers(); return false;">
+                <p class="eyebrow">Step 2 of 3</p>
+                <h2 tabindex="-1">Name the players</h2>
+
+                <div id="playersContainer" class="field-stack"></div>
+                <p class="error" id="playersError" role="alert"></p>
+
+                <div id="saveSection" class="actions">
+                    <button type="button" class="btn btn-ghost" onclick="showStep('stepCount')">Back</button>
+                    <button type="submit" class="btn btn-primary">Save players</button>
+                </div>
+            </form>
+        </section>
+
+        <!-- STEP 3: ROUNDS -->
+        <section id="roundSection" class="panel step" hidden>
+            <form id="roundForm" novalidate onsubmit="startGame(); return false;">
+                <p class="eyebrow">Step 3 of 3</p>
+                <h2 tabindex="-1">How many rounds?</h2>
+
+                <div class="field">
+                    <label for="numRounds">Number of rounds</label>
+                    <input type="number" id="numRounds" min="1" max="50" step="1"
+                           inputmode="numeric" placeholder="e.g. 5" autocomplete="off"
+                           aria-required="true" aria-describedby="numRoundsHint numRoundsError">
+                    <p class="hint" id="numRoundsHint">Between 1 and 50 rounds.</p>
+                    <p class="error" id="numRoundsError" role="alert"></p>
+                </div>
+
+                <div class="actions">
+                    <button type="button" class="btn btn-ghost" onclick="showStep('stepNames')">Back</button>
+                    <button type="submit" class="btn btn-primary">Start game</button>
+                </div>
+            </form>
+        </section>
+
+        <!-- GAME: SCORE ENTRY, STANDINGS, FINAL RESULTS (rendered by script.js) -->
+        <section id="gameContainer" class="panel step" hidden></section>
+
+    </div>
+
+</div>
+
+<script src="script.js"></script>
+
+</body>
+</html>
