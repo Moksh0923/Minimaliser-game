@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0f1311">
+    <title>Tic Tac Toe · Online</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="tictactoe.css">
+</head>
+<body>
+<div class="app">
+    <header class="topbar">
+        <a class="wordmark" href="index.html" id="homeLink">&larr; Home</a>
+        <span class="topbar-note">Tic tac toe &middot; online</span>
+    </header>
+
+    <!-- LOBBY -->
+    <section id="lobby" class="panel step">
+        <h2 tabindex="-1">Play with a friend</h2>
+        <p class="lede">Host a party and send the code, or enter a code you were given.</p>
+        <div class="choice">
+            <button type="button" class="btn btn-primary" id="hostBtn">Host a party</button>
+            <button type="button" class="btn btn-ghost" id="joinBtn">Join a party</button>
+        </div>
+        <p class="error" id="lobbyError" role="alert"></p>
+    </section>
+
+    <!-- HOST: WAITING -->
+    <section id="hostView" class="panel step" hidden>
+        <h2 tabindex="-1">Your party</h2>
+        <p class="hint">Share this code. Your friend enters it on their device.</p>
+        <p class="party-code" id="partyCode" aria-live="polite">&hellip;</p>
+        <p class="hint" id="hostStatus" role="status">Creating party&hellip;</p>
+        <div class="actions">
+            <button type="button" class="btn btn-ghost" data-leave>Cancel</button>
+            <button type="button" class="btn btn-primary" id="copyBtn" disabled>Copy code</button>
+        </div>
+    </section>
+
+    <!-- JOIN -->
+    <section id="joinView" class="panel step" hidden>
+        <form id="joinForm" novalidate>
+            <h2 tabindex="-1">Join a party</h2>
+            <div class="field">
+                <label for="codeInput">Party code</label>
+                <input type="text" id="codeInput" class="code-input" maxlength="5" autocomplete="off"
+                       autocapitalize="characters" spellcheck="false" placeholder="ABC12"
+                       aria-describedby="joinError">
+                <p class="error" id="joinError" role="alert"></p>
+            </div>
+            <div class="actions">
+                <button type="button" class="btn btn-ghost" data-leave>Back</button>
+                <button type="submit" class="btn btn-primary" id="joinSubmit">Join</button>
+            </div>
+        </form>
+    </section>
+
+    <!-- GAME -->
+    <section id="gameView" class="panel step" hidden>
+        <p class="eyebrow" id="roleLine"></p>
+        <h2 tabindex="-1" id="statusLine" role="status" aria-live="polite"></h2>
+
+        <div class="ttt-board" id="board" role="grid" aria-label="Tic tac toe board"></div>
+
+        <dl class="scores" id="scores"></dl>
+
+        <div class="actions">
+            <button type="button" class="btn btn-ghost" data-leave>Leave</button>
+            <button type="button" class="btn btn-primary" id="againBtn" hidden>Play again</button>
+        </div>
+    </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="tictactoe.js"></script>
+</body>
+</html>

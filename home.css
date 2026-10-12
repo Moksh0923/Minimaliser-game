@@ -1,0 +1,60 @@
+.home-head { margin-bottom: 2rem; }
+.home-head .lede { margin-bottom: 0; }
+
+.games { display: grid; gap: 1rem; }
+
+.game-card {
+    display: grid;
+    grid-template-columns: 5.5rem minmax(0, 1fr);
+    gap: 1.25rem;
+    align-items: center;
+    padding: 1.25rem;
+    color: inherit;
+    text-decoration: none;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    transition: border-color 0.15s, background-color 0.15s;
+}
+
+.game-card:hover { border-color: var(--accent); background: var(--surface-2); }
+.game-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+.game-art {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 3px;
+    width: 5.5rem;
+    aspect-ratio: 1;
+    padding: 6px;
+    background: var(--bg);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    font: 600 1rem/1 var(--serif);
+    color: var(--muted);
+}
+
+.game-art > span {
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+}
+
+.game-art .lead { color: var(--accent); border-color: var(--accent); }
+
+/* Minimaliser art: a single row of three scores */
+.game-art:not(.ttt) { grid-template-columns: 1fr; grid-template-rows: repeat(3, 1fr); }
+.game-art:not(.ttt) > span { justify-content: end; padding-right: 0.5rem; font-variant-numeric: tabular-nums; }
+
+.game-art.ttt { font-size: 0.8rem; }
+
+.game-body { display: grid; gap: 0.3rem; min-width: 0; }
+.game-title { font: 600 1.375rem/1.2 var(--serif); }
+.game-text { color: var(--muted); font-size: 0.9375rem; }
+.game-meta { font-size: 0.8125rem; color: var(--accent); }
+
+@media (max-width: 420px) {
+    .game-card { grid-template-columns: 4.25rem minmax(0, 1fr); gap: 1rem; padding: 1rem; }
+    .game-art { width: 4.25rem; }
+}
