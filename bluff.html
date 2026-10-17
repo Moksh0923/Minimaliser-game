@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0f1311">
+    <title>Bluff · Online</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="bluff.css">
+</head>
+<body>
+<div class="app">
+    <header class="topbar">
+        <a class="wordmark" href="index.html" id="homeLink">&larr; Home</a>
+        <span class="topbar-note">Bluff &middot; online</span>
+    </header>
+
+    <!-- LOBBY -->
+    <section id="lobby" class="panel step">
+        <h2 tabindex="-1">Play Bluff</h2>
+        <p class="lede">Host a room and share the code, or enter a code you were given. 2&ndash;8 players.</p>
+
+        <div class="field name-field">
+            <label for="nameInput">Your name</label>
+            <input type="text" id="nameInput" maxlength="14" autocomplete="nickname" placeholder="Enter name"
+                   aria-describedby="lobbyError">
+        </div>
+        <p class="error" id="lobbyError" role="alert"></p>
+
+        <div class="choice">
+            <button type="button" class="btn btn-primary" id="hostBtn">Host a room</button>
+            <button type="button" class="btn btn-ghost" id="joinBtn">Join a room</button>
+        </div>
+    </section>
+
+    <!-- JOIN -->
+    <section id="joinView" class="panel step" hidden>
+        <form id="joinForm" novalidate>
+            <h2 tabindex="-1">Join a room</h2>
+            <div class="field">
+                <label for="codeInput">Room code</label>
+                <input type="text" id="codeInput" class="code-input" maxlength="5" autocomplete="off"
+                       autocapitalize="characters" spellcheck="false" placeholder="ABC12"
+                       aria-describedby="joinError">
+                <p class="error" id="joinError" role="alert"></p>
+            </div>
+            <div class="actions">
+                <button type="button" class="btn btn-ghost" data-leave>Back</button>
+                <button type="submit" class="btn btn-primary" id="joinSubmit">Join</button>
+            </div>
+        </form>
+    </section>
+
+    <!-- ROOM (waiting for players) -->
+    <section id="roomView" class="panel step" hidden>
+        <p class="eyebrow">Room</p>
+        <h2 tabindex="-1" id="roomHeading">Your room</h2>
+        <p class="hint" id="roomHint">Share this code. Friends enter it on their own device.</p>
+        <p class="party-code" id="partyCode" aria-live="polite">&hellip;</p>
+
+        <h3 class="section-label">Players <span id="rosterCount"></span></h3>
+        <ol class="roster" id="roster"></ol>
+        <p class="hint" id="roomStatus" role="status"></p>
+
+        <div class="actions">
+            <button type="button" class="btn btn-ghost" data-leave>Leave</button>
+            <button type="button" class="btn btn-ghost" id="copyBtn" disabled>Copy code</button>
+            <button type="button" class="btn btn-primary" id="startBtn" hidden>Start game</button>
+        </div>
+    </section>
+
+    <!-- GAME -->
+    <section id="gameView" class="panel step" hidden>
+        <div class="room-row">
+            <p class="eyebrow" id="roomLine"></p>
+            <button type="button" class="link-btn" data-leave>Leave</button>
+        </div>
+        <h2 tabindex="-1" id="statusLine" role="status" aria-live="polite"></h2>
+
+        <ul class="seats" id="seats" aria-label="Players"></ul>
+
+        <dl class="table" id="table">
+            <div>
+                <dt>Pile</dt>
+                <dd><span class="pile-art" id="pileArt" aria-hidden="true"></span><span id="pileCount">0</span></dd>
+            </div>
+            <div>
+                <dt id="claimLabel">Next claim</dt>
+                <dd><span class="claim-rank" id="claimRank"></span><span class="claim-name" id="claimName"></span></dd>
+            </div>
+        </dl>
+        <p class="last-play" id="lastPlay"></p>
+
+        <div class="result" id="resultBox" hidden>
+            <h3 class="result-label" id="resultLabel"></h3>
+            <p class="result-names" id="resultTitle"></p>
+            <div class="reveal" id="resultCards"></div>
+            <p class="result-detail" id="resultDetail"></p>
+        </div>
+
+        <h3 class="section-label" id="handLabel">Your hand</h3>
+        <div class="hand" id="hand" role="group" aria-labelledby="handLabel"></div>
+        <p class="error" id="playError" role="alert"></p>
+
+        <div class="actions" id="gameActions">
+            <button type="button" class="btn btn-ghost btn-call" id="callBtn">Call bluff</button>
+            <button type="button" class="btn btn-primary" id="playBtn">Play cards</button>
+            <button type="button" class="btn btn-primary" id="acceptBtn" hidden>Let it stand</button>
+            <button type="button" class="btn btn-primary" id="againBtn" hidden>Play again</button>
+        </div>
+    </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="bluff.js"></script>
+</body>
+</html>

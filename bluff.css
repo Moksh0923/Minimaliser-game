@@ -1,0 +1,189 @@
+/* Bluff. Shares tokens and base components with style.css. */
+
+/* ---------- lobby & room (same pieces as tictactoe.css) ---------- */
+.choice { display: grid; gap: 0.75rem; margin-top: 1.25rem; }
+.choice .btn { width: 100%; }
+
+.party-code {
+    margin: 1rem 0 1.5rem;
+    padding: 1.25rem 0.5rem;
+    text-align: center;
+    font: 600 clamp(2.5rem, 14vw, 3.5rem)/1 var(--serif);
+    letter-spacing: 0.25em;
+    padding-left: calc(0.5rem + 0.25em);
+    color: var(--accent);
+    background: var(--bg);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    user-select: all;
+}
+
+.code-input {
+    text-align: center;
+    font: 600 1.75rem/1 var(--serif);
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+}
+
+.name-field { margin-top: 0.25rem; }
+
+/* ---------- roster ---------- */
+.roster { list-style: none; margin: 0 0 1rem; padding: 0; border-top: 1px solid var(--line); }
+
+.roster-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+    padding: 0.7rem 0.25rem;
+    border-bottom: 1px solid var(--line);
+}
+
+.roster-name { font-weight: 500; overflow-wrap: anywhere; }
+.roster-tag { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); white-space: nowrap; }
+
+.actions .btn-ghost { flex: 0 0 auto; }
+
+/* ---------- game header ---------- */
+.room-row { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }
+.room-row .eyebrow { margin-bottom: 0.5rem; }
+
+.link-btn {
+    padding: 0.25rem 0;
+    font: 600 0.8125rem/1 var(--sans);
+    color: var(--muted);
+    background: none;
+    border: 0;
+    border-bottom: 1px solid var(--line-strong);
+    cursor: pointer;
+}
+.link-btn:hover { color: var(--text); border-color: var(--muted); }
+.link-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+/* ---------- seats ---------- */
+.seats { list-style: none; margin: 0 0 1.25rem; padding: 0; border-top: 1px solid var(--line); }
+
+.seat {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid var(--line);
+}
+
+.seat-name { font-weight: 500; overflow-wrap: anywhere; }
+.seat-count { font-size: 0.875rem; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.seat.turn { background: rgba(214, 178, 94, 0.06); box-shadow: inset 2px 0 0 var(--accent); }
+.seat.turn .seat-name { color: var(--accent); }
+.seat.gone { opacity: 0.5; }
+
+/* ---------- table: pile + claim ---------- */
+.table {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    margin: 0 0 0.75rem;
+}
+
+.table > div { padding: 0.75rem 0.9rem; border: 1px solid var(--line); border-radius: var(--radius-sm); }
+.table dt { margin-bottom: 0.4rem; font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.table dd { display: flex; align-items: center; gap: 0.75rem; margin: 0; font: 600 1.125rem/1.2 var(--serif); font-variant-numeric: tabular-nums; }
+
+.claim-rank { font-size: 2rem; line-height: 1; color: var(--accent); }
+.claim-name { font: 500 0.9375rem/1.2 var(--sans); color: var(--muted); }
+
+.pile-art { display: inline-flex; min-width: 1.6rem; }
+.pile-art .card + .card { margin-left: -1.05rem; }
+
+.last-play { margin: 0 0 1.25rem; font-size: 0.875rem; color: var(--muted); }
+.last-play:empty, .pile-art:empty { display: none; }
+
+/* ---------- cards ---------- */
+.card {
+    --cw: 2.75rem;
+    position: relative;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: space-between;
+    width: var(--cw);
+    height: calc(var(--cw) * 1.4);
+    padding: 0.3rem 0.35rem;
+    font-family: var(--serif);
+    line-height: 1;
+    color: #1d1b16;
+    background: #ece6d6;
+    border: 1px solid #b9b19b;
+    border-radius: 4px;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+}
+
+.card.red { color: #a8402f; }
+.c-rank { font-size: 1.05rem; font-weight: 700; }
+.c-suit { align-self: flex-end; font-size: 1.35rem; }
+
+.card.sm { --cw: 2.4rem; }
+.card.sm .c-rank { font-size: 0.95rem; }
+.card.sm .c-suit { font-size: 1.15rem; }
+
+.card.xs { --cw: 1.6rem; }
+
+.card.back {
+    background: var(--surface-2);
+    border-color: var(--line-strong);
+    box-shadow: inset 0 0 0 3px var(--surface-2), inset 0 0 0 4px var(--line-strong);
+}
+.card.back > * { display: none; }
+
+/* a card that wasn't the claimed rank */
+.card.miss { outline: 2px solid var(--danger); outline-offset: 1px; }
+
+/* ---------- hand ---------- */
+.hand {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    padding: 0.5rem 0 0.25rem;
+}
+
+button.card { cursor: pointer; transition: transform 0.12s, outline-color 0.12s; font-size: 1rem; }
+button.card:hover { transform: translateY(-2px); }
+button.card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button.card.selected { transform: translateY(-0.5rem); outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+
+/* ---------- reveal ---------- */
+.result-label {
+    margin: 0 0 0.35rem;
+    font: 600 0.6875rem/1.3 var(--sans);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+}
+.result .result-names { font-size: clamp(1.25rem, 5vw, 1.75rem); }
+.reveal { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.9rem; }
+.reveal:empty { display: none; }
+
+/* ---------- actions ---------- */
+.btn-call { color: var(--danger); border-color: var(--danger); }
+.btn-call:hover:not(:disabled) { border-color: var(--danger); background: rgba(232, 128, 111, 0.08); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn:disabled:hover { background: inherit; }
+.btn-primary:disabled:hover { background: var(--accent); }
+
+@media (min-width: 481px) {
+    .card { --cw: 3.4rem; }
+    .card.sm { --cw: 2.8rem; }
+    .card.xs { --cw: 1.8rem; }
+    .c-rank { font-size: 1.2rem; }
+    .c-suit { font-size: 1.6rem; }
+}
+
+@media (max-width: 380px) {
+    .table dd { flex-wrap: wrap; gap: 0.4rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    button.card { transition: none; }
+}

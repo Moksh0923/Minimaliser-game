@@ -44,10 +44,14 @@
 .game-art .lead { color: var(--accent); border-color: var(--accent); }
 
 /* Minimaliser art: a single row of three scores */
-.game-art:not(.ttt) { grid-template-columns: 1fr; grid-template-rows: repeat(3, 1fr); }
-.game-art:not(.ttt) > span { justify-content: end; padding-right: 0.5rem; font-variant-numeric: tabular-nums; }
+.game-art:not(.ttt):not(.bl) { grid-template-columns: 1fr; grid-template-rows: repeat(3, 1fr); }
+.game-art:not(.ttt):not(.bl) > span { justify-content: end; padding-right: 0.5rem; font-variant-numeric: tabular-nums; }
 
 .game-art.ttt { font-size: 0.8rem; }
+
+/* Bluff art: two face-down cards and the claimed rank */
+.game-art.bl { grid-template-columns: repeat(3, 1fr); grid-template-rows: 1fr; gap: 4px; padding: 14px 6px; }
+.game-art.bl .back { background: var(--surface-2); border-color: var(--line-strong); }
 
 .game-body { display: grid; gap: 0.3rem; min-width: 0; }
 .game-title { font: 600 1.375rem/1.2 var(--serif); }
