@@ -20,6 +20,17 @@
         <h2 tabindex="-1">Play Bluff</h2>
         <p class="lede">Host a room and share the code, or enter a code you were given. 2&ndash;8 players.</p>
 
+        <details class="rules">
+            <summary>How this version plays</summary>
+            <ul>
+                <li>The player who leads a round declares a rank, such as &ldquo;8s&rdquo;, and plays any number of cards face down as that rank.</li>
+                <li>Everyone after them plays any number of cards, all claimed as that same rank (truthfully or not), or passes. A round is one trip around the table.</li>
+                <li>Anyone can call bluff right after a play. A liar picks up the whole pile and the caller leads next. A wrong caller picks it up and the accused leads next.</li>
+                <li>If nobody calls, the pile is burned and the same player leads again with any rank.</li>
+                <li>First to play out their hand wins, as long as their last play isn&rsquo;t caught.</li>
+            </ul>
+        </details>
+
         <div class="field name-field">
             <label for="nameInput">Your name</label>
             <input type="text" id="nameInput" maxlength="14" autocomplete="nickname" placeholder="Enter name"
@@ -85,10 +96,11 @@
                 <dd><span class="pile-art" id="pileArt" aria-hidden="true"></span><span id="pileCount">0</span></dd>
             </div>
             <div>
-                <dt id="claimLabel">Next claim</dt>
+                <dt id="claimLabel">This round</dt>
                 <dd><span class="claim-rank" id="claimRank"></span><span class="claim-name" id="claimName"></span></dd>
             </div>
         </dl>
+        <ul class="feed" id="feed" aria-label="Recent moves"></ul>
         <p class="last-play" id="lastPlay"></p>
 
         <div class="result" id="resultBox" hidden>
@@ -98,14 +110,19 @@
             <p class="result-detail" id="resultDetail"></p>
         </div>
 
+        <div id="declare" hidden>
+            <h3 class="section-label" id="rankLabel">Declare a rank</h3>
+            <div class="rankpick" id="rankPick" role="radiogroup" aria-labelledby="rankLabel"></div>
+        </div>
+
         <h3 class="section-label" id="handLabel">Your hand</h3>
         <div class="hand" id="hand" role="group" aria-labelledby="handLabel"></div>
         <p class="error" id="playError" role="alert"></p>
 
         <div class="actions" id="gameActions">
             <button type="button" class="btn btn-ghost btn-call" id="callBtn">Call bluff</button>
+            <button type="button" class="btn btn-ghost" id="passBtn">Pass</button>
             <button type="button" class="btn btn-primary" id="playBtn">Play cards</button>
-            <button type="button" class="btn btn-primary" id="acceptBtn" hidden>Let it stand</button>
             <button type="button" class="btn btn-primary" id="againBtn" hidden>Play again</button>
         </div>
     </section>

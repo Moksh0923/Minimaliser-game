@@ -60,6 +60,16 @@
 .link-btn:hover { color: var(--text); border-color: var(--muted); }
 .link-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
+/* ---------- rules summary (lobby) ---------- */
+.rules { margin: 0 0 1.5rem; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.rules summary { padding: 0.8rem 0; font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); cursor: pointer; list-style: none; }
+.rules summary::-webkit-details-marker { display: none; }
+.rules summary::before { content: "+"; display: inline-block; width: 1.1rem; color: var(--accent); }
+.rules[open] summary::before { content: "\2212"; }
+.rules summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.rules ul { margin: 0; padding: 0 0 1rem 1.1rem; font-size: 0.875rem; color: var(--muted); }
+.rules li { margin: 0 0 0.45rem; }
+
 /* ---------- seats ---------- */
 .seats { list-style: none; margin: 0 0 1.25rem; padding: 0; border-top: 1px solid var(--line); }
 
@@ -73,6 +83,8 @@
 }
 
 .seat-name { font-weight: 500; overflow-wrap: anywhere; }
+.seat-meta { display: flex; align-items: baseline; gap: 0.75rem; }
+.seat-tag { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
 .seat-count { font-size: 0.875rem; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 .seat.turn { background: rgba(214, 178, 94, 0.06); box-shadow: inset 2px 0 0 var(--accent); }
@@ -97,8 +109,31 @@
 .pile-art { display: inline-flex; min-width: 1.6rem; }
 .pile-art .card + .card { margin-left: -1.05rem; }
 
+.feed { list-style: none; margin: 0 0 0.75rem; padding: 0; font-size: 0.875rem; color: var(--muted); }
+.feed:empty { display: none; }
+.feed li { padding: 0.1rem 0; }
+.feed li:last-child { color: var(--text); }
+
 .last-play { margin: 0 0 1.25rem; font-size: 0.875rem; color: var(--muted); }
 .last-play:empty, .pile-art:empty { display: none; }
+
+/* ---------- rank picker (leader declares) ---------- */
+.rankpick { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 1.25rem; }
+
+.rank-btn {
+    min-width: 2.5rem;
+    height: 2.5rem;
+    padding: 0 0.4rem;
+    font: 600 1rem/1 var(--serif);
+    color: var(--text);
+    background: var(--bg);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+}
+.rank-btn:hover { border-color: var(--muted); }
+.rank-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.rank-btn[aria-checked="true"] { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
 
 /* ---------- cards ---------- */
 .card {
@@ -178,6 +213,14 @@ button.card.selected { transform: translateY(-0.5rem); outline: 2px solid var(--
     .card.xs { --cw: 1.8rem; }
     .c-rank { font-size: 1.2rem; }
     .c-suit { font-size: 1.6rem; }
+}
+
+/* Phones: Call/Pass share a row, the main action gets its own full-width row */
+@media (max-width: 480px) {
+    #gameActions { flex-wrap: wrap; }
+    #gameActions .btn-call, #gameActions #passBtn { flex: 1 1 calc(50% - 0.4rem); }
+    #gameActions #playBtn { flex: 1 1 100%; }
+    #gameActions #againBtn { flex: 1 1 100%; }
 }
 
 @media (max-width: 380px) {

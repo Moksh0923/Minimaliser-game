@@ -1,17 +1,28 @@
-/* Online Bluff (also called Cheat).
+/* Online Bluff.
    Same networking approach as tictactoe.js: PeerJS (WebRTC), host peer ID derived from the
    room code. The host is the referee: it shuffles, deals, validates every action and is the
    only device that ever holds every hand. Each guest is sent only their own cards plus
    public information (card counts, pile size, whose turn it is).
 
-   HOUSE RULES: everything a rule change should touch is in RULES below, or in the three
-   functions applyPlay / applyCall / applyAccept. */
+   RULES IN BRIEF
+   - A round is one circuit of the table. The round's starter declares a RANK and plays any
+     number of cards face down as that rank.
+   - Everyone after them either plays any number of cards (all claimed as that same rank,
+     truthfully or not) or passes. The round ends once the player before the starter has acted.
+   - Anyone can call "Bluff!" after a play, until the next player acts. A liar takes the whole
+     pile and the challenger starts the next round. A wrong caller takes the pile and the
+     accused starts the next round.
+   - If nobody calls, the pile is burned and the same starter leads again with any rank.
+   - First player to empty their hand wins, provided their last play survives a call.
+
+   Tweakable numbers are in RULES. The rules themselves live in applyPlay / applyPass /
+   applyCall. */
 
 const RULES = {
     minPlayers: 2,
     maxPlayers: 8,
-    maxCards: 4,                         // most cards one player may put down in a turn
-    startRank: 0,                        // 0 = Aces, 1 = Twos ... 12 = Kings
+    maxCards: null,        // most cards anyone may play in one turn (null = no limit)
+    callWindowMs: 1200,    // after a play, the next player must wait this long so others can call
     decksFor: (players) => (players >= 7 ? 2 : 1)
 };
 
@@ -44,6 +55,7 @@ let nextPid = 1;
 let view = null;            // what this device is allowed to see
 let shown = null;
 let handKey = "";
+let declRank = null;        // rank the starter has chosen to declare
 const selected = new Set();
 
 /* =====================================================================
@@ -83,13 +95,17 @@ function newGame() {
         phase: "lobby",       // "lobby" | "playing" | "over"
         players: [],          // seat order: { pid, name, hand, out }
         turn: null,
-        rankIndex: RULES.startRank, // rank the next play must claim
+        starter: null,        // leads the current round
+        lock: null,           // { rankIndex } set by the starter; null until declared
+        roundOver: false,     // the circuit is complete and the starter is to lead again
         pile: [],
-        lastPlay: null,       // { by, cards, rankIndex }
+        lastPlay: null,       // { by, cards, rankIndex }: the play that can still be called
+        playAt: 0,            // when lastPlay happened (for callWindowMs)
         pendingWin: null,     // player who just played their last cards, not yet challenged
         result: null,         // most recent challenge
         winner: null,
-        endReason: ""
+        endReason: "",
+        log: []
     };
 }
 
@@ -108,6 +124,40 @@ function nextActive(pid) {
     return pid;
 }
 
+function note(entry) {
+    game.log.push(entry);
+    if (game.log.length > 8) game.log.shift();
+}
+
+// The starter must (re)declare when no lock is set yet, or the circuit has just finished.
+function isDeclaring() {
+    return game.turn === game.starter && (game.lock === null || game.roundOver);
+}
+
+// Others get a moment to call bluff before the next player can act on a fresh play.
+function tooSoon() {
+    return game.lastPlay !== null && Date.now() - game.playAt < RULES.callWindowMs;
+}
+
+function burnPile() {
+    if (game.pile.length) note({ t: "burn", count: game.pile.length });
+    game.pile = [];
+}
+
+// Move play on from `pid`; if that completes the circuit, the round is over.
+function advanceFrom(pid) {
+    const next = nextActive(pid);
+    if (next === game.starter) {
+        game.roundOver = true;
+        game.turn = game.starter;
+        // Nothing left to challenge, so the pile burns now. Otherwise it burns when the
+        // starter leads again (or goes to whoever loses a call).
+        if (game.lastPlay === null) burnPile();
+    } else {
+        game.turn = next;
+    }
+}
+
 function addPlayer(pid, rawName) {
     let base = String(rawName || "").replace(/\s+/g, " ").trim().slice(0, MAX_NAME) || `Player ${pid + 1}`;
     let name = base, n = 2;
@@ -123,10 +173,11 @@ function dealGame() {
     deck.forEach((id, i) => game.players[i % n].hand.push(id));
     game.players.forEach((p) => p.hand.sort(byRankThenSuit));
 
+    const starter = game.players[randInt(n)].pid;
     Object.assign(game, {
-        phase: "playing", pile: [], lastPlay: null, pendingWin: null, result: null,
-        winner: null, endReason: "", rankIndex: RULES.startRank,
-        turn: game.players[randInt(n)].pid
+        phase: "playing", pile: [], lastPlay: null, playAt: 0, pendingWin: null, result: null,
+        winner: null, endReason: "", lock: null, roundOver: false, log: [],
+        starter, turn: starter
     });
 }
 
@@ -137,12 +188,12 @@ function finish(pid, reason) {
     game.endReason = reason || "";
 }
 
-function applyPlay(pid, cards) {
+function applyPlay(pid, cards, rankIndex) {
     if (game.phase !== "playing") return fail("The game isn't running.");
     if (game.turn !== pid) return fail("It isn't your turn.");
     if (game.pendingWin !== null) return fail("Call the bluff or let it stand first.");
+    if (tooSoon()) return fail("Hold on, others can still call bluff.");
     if (!Array.isArray(cards) || cards.length < 1) return fail("Pick at least one card.");
-    if (cards.length > RULES.maxCards) return fail(`You can play up to ${RULES.maxCards} cards at once.`);
 
     const me = seat(pid);
     const unique = new Set(cards);
@@ -150,24 +201,58 @@ function applyPlay(pid, cards) {
         return fail("Those cards aren't in your hand.");
     }
 
+    const declaring = isDeclaring();
+    if (declaring && (!Number.isInteger(rankIndex) || rankIndex < 0 || rankIndex > 12)) return fail("Choose a rank to declare.");
+    if (RULES.maxCards && cards.length > RULES.maxCards) return fail(`You can play up to ${RULES.maxCards} cards at once.`);
+
+    // All checks passed: apply.
+    if (declaring) {
+        if (game.roundOver) burnPile();                 // the previous round ends here
+        game.lock = { rankIndex };
+        game.roundOver = false;
+        game.starter = pid;
+        game.result = null;
+    }
+
     me.hand = me.hand.filter((c) => !unique.has(c));
     game.pile.push(...cards);
-    game.lastPlay = { by: pid, cards: cards.slice(), rankIndex: game.rankIndex };
-    game.rankIndex = (game.rankIndex + 1) % 13;
-    game.result = null;
+    game.lastPlay = { by: pid, cards: cards.slice(), rankIndex: game.lock.rankIndex };
+    game.playAt = Date.now();
+    note({ t: "play", by: pid, count: cards.length, rank: game.lock.rankIndex, starts: declaring });
     if (me.hand.length === 0) game.pendingWin = pid;
-    game.turn = nextActive(pid);
+
+    advanceFrom(pid);
+    return { ok: true };
+}
+
+function applyPass(pid) {
+    if (game.phase !== "playing" || game.turn !== pid) return fail("It isn't your turn.");
+
+    if (game.pendingWin !== null) {                     // "let it stand": nobody called
+        if (tooSoon()) return fail("Hold on, others can still call bluff.");
+        finish(game.pendingWin);
+        return { ok: true };
+    }
+    if (isDeclaring()) return fail("You lead this round, so you have to play.");
+    if (tooSoon()) return fail("Hold on, others can still call bluff.");
+
+    game.lastPlay = null;                               // a pass closes the window to call
+    note({ t: "pass", by: pid });
+    advanceFrom(pid);
     return { ok: true };
 }
 
 function applyCall(pid) {
-    if (game.phase !== "playing" || game.turn !== pid) return fail("It isn't your turn.");
+    if (game.phase !== "playing") return fail("The game isn't running.");
+    const caller = seat(pid);
+    if (!caller || caller.out) return fail("You're not in this game.");
     const lp = game.lastPlay;
-    if (!lp) return fail("There's nothing to call yet.");
+    if (!lp) return fail("There's nothing to call right now.");
+    if (lp.by === pid) return fail("You can't call your own play.");
 
     const truthful = lp.cards.every((c) => cardRank(c) === lp.rankIndex);
-    const loserPid = truthful ? pid : lp.by;          // wrong caller, or caught bluffer
-    const winnerPid = truthful ? lp.by : pid;
+    const loserPid = truthful ? pid : lp.by;            // wrong caller, or caught bluffer
+    const starterPid = truthful ? lp.by : pid;          // the other one leads next
     const loser = seat(loserPid);
     const picked = game.pile.length;
 
@@ -179,19 +264,16 @@ function applyCall(pid) {
     };
     game.pile = [];
     game.lastPlay = null;
+    game.lock = null;
+    game.roundOver = false;
 
     if (game.pendingWin !== null && truthful) {
-        finish(game.pendingWin);                      // honest last play: they're out
+        finish(game.pendingWin);                        // honest last play: they're out
     } else {
         game.pendingWin = null;
-        game.turn = winnerPid;                        // challenge winner starts the next round
+        game.starter = starterPid;
+        game.turn = starterPid;
     }
-    return { ok: true };
-}
-
-function applyAccept(pid) {
-    if (game.phase !== "playing" || game.turn !== pid || game.pendingWin === null) return fail("There's nothing to accept.");
-    finish(game.pendingWin);
     return { ok: true };
 }
 
@@ -201,7 +283,7 @@ function playAgain() {
     if (game.players.length < RULES.minPlayers) {
         game.phase = "lobby";
         game.players.forEach((p) => { p.hand = []; });
-        game.result = null; game.pile = []; game.lastPlay = null; game.winner = null;
+        Object.assign(game, { result: null, pile: [], lastPlay: null, winner: null, lock: null, roundOver: false, log: [] });
     } else {
         dealGame();
     }
@@ -229,8 +311,16 @@ function removePlayer(pid) {
         const alive = activePlayers();
         if (alive.length < RULES.minPlayers) {
             finish(alive.length === 1 ? alive[0].pid : null, "left");
+        } else if (game.starter === pid) {
+            // The leader left: the next player leads a fresh round and the old pile burns.
+            game.starter = nextActive(pid);
+            game.turn = game.starter;
+            game.lock = null;
+            game.roundOver = false;
+            game.lastPlay = null;
+            burnPile();
         } else if (game.turn === pid) {
-            game.turn = nextActive(pid);
+            advanceFrom(pid);
         }
     }
     broadcast();
@@ -247,13 +337,16 @@ function viewFor(pid) {
         players: game.players.map((p) => ({ pid: p.pid, name: p.name, count: p.hand.length, out: p.out })),
         hand: me && !me.out ? me.hand.slice() : [],
         turn: game.turn,
-        rankIndex: game.rankIndex,
+        starter: game.starter,
+        lock: game.lock,
+        roundOver: game.roundOver,
         pileCount: game.pile.length,
         lastPlay: lp ? { by: lp.by, count: lp.cards.length, rankIndex: lp.rankIndex } : null,
         pendingWin: game.pendingWin,
         result: game.result,
         winner: game.winner,
-        endReason: game.endReason
+        endReason: game.endReason,
+        log: game.log.slice(-4)
     };
 }
 
@@ -289,7 +382,7 @@ function nameOf(pid) {
 const who = (pid) => (view && pid === view.you ? "You" : nameOf(pid));
 const whoObj = (pid) => (view && pid === view.you ? "you" : nameOf(pid));
 const verb = (pid, you, they) => (view && pid === view.you ? you : they);
-const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+function plural(n, word) { return `${n} ${word}${n === 1 ? "" : "s"}`; }
 
 function cardLabel(id) { return `${RANK_SINGULAR[cardRank(id)]} of ${SUIT_NAMES[cardSuit(id)]}`; }
 
@@ -299,6 +392,17 @@ function cardEl(id, kind, extra) {
     node.append(el("span", "c-rank", RANKS[cardRank(id)]), el("span", "c-suit", SUITS[cardSuit(id)] + "︎"));
     node.setAttribute(kind === "button" ? "aria-label" : "title", cardLabel(id));
     return node;
+}
+
+/* Which controls does this player have right now? */
+function modeOf(v) {
+    const playing = v.phase === "playing";
+    const myTurn = playing && v.turn === v.you;
+    const letStand = myTurn && v.pendingWin !== null;
+    const declaring = myTurn && !letStand && (v.lock === null || v.roundOver);
+    const following = myTurn && !letStand && !declaring;
+    const canCall = playing && v.lastPlay !== null && v.lastPlay.by !== v.you;
+    return { playing, myTurn, letStand, declaring, following, canCall };
 }
 
 /* =====================================================================
@@ -342,24 +446,36 @@ function renderRoom() {
         : "Waiting for the host to start the game…";
 }
 
-function statusText(v) {
+function statusText(v, m) {
     if (v.phase === "over") {
         if (v.endReason === "left" && v.winner === null) return "Everyone left";
         return v.winner === v.you ? "You win" : `${nameOf(v.winner)} wins`;
     }
-    const myTurn = v.turn === v.you;
-    if (v.pendingWin !== null && myTurn) return `${nameOf(v.pendingWin)} played their last cards`;
-    if (myTurn) return v.lastPlay ? "Your turn" : "You start the round";
+    if (m.letStand) return `${nameOf(v.pendingWin)} played their last cards`;
+    if (m.declaring) return v.roundOver ? "Round complete. You lead again" : "You lead the round";
+    if (m.myTurn) return `Your turn: play ${RANK_NAMES[v.lock.rankIndex]} or pass`;
+    if (v.roundOver) return `Round complete. ${nameOf(v.starter)} leads next`;
     return `${nameOf(v.turn)}’s turn`;
+}
+
+function feedLine(e) {
+    if (e.t === "play") {
+        return e.starts
+            ? `${who(e.by)} ${verb(e.by, "lead", "leads")} with ${e.count} × ${RANK_NAMES[e.rank]}`
+            : `${who(e.by)} played ${plural(e.count, "card")} as ${RANK_NAMES[e.rank]}`;
+    }
+    if (e.t === "pass") return `${who(e.by)} passed`;
+    if (e.t === "burn") return `${plural(e.count, "card")} burned`;
+    return "";
 }
 
 function renderGame() {
     const v = view;
+    const m = modeOf(v);
     const over = v.phase === "over";
-    const myTurn = !over && v.turn === v.you;
 
     $("roomLine").textContent = `Room ${v.code}`;
-    $("statusLine").textContent = statusText(v);
+    $("statusLine").textContent = statusText(v, m);
 
     // seats
     const seats = $("seats");
@@ -367,7 +483,10 @@ function renderGame() {
     v.players.forEach((p) => {
         const li = el("li", "seat" + (!over && p.pid === v.turn ? " turn" : "") + (p.out ? " gone" : ""));
         li.append(el("span", "seat-name", p.name + (p.pid === v.you ? " (you)" : "")));
-        li.append(el("span", "seat-count", p.out ? "Left" : plural(p.count, "card")));
+        const meta = el("span", "seat-meta");
+        if (!over && !p.out && p.pid === v.starter) meta.append(el("span", "seat-tag", "Leads"));
+        meta.append(el("span", "seat-count", p.out ? "Left" : plural(p.count, "card")));
+        li.append(meta);
         if (!over && p.pid === v.turn) li.setAttribute("aria-current", "true");
         seats.appendChild(li);
     });
@@ -377,24 +496,37 @@ function renderGame() {
     const art = $("pileArt");
     art.innerHTML = "";
     for (let i = 0; i < Math.min(3, v.pileCount); i++) art.appendChild(el("span", "card back xs"));
-    $("claimLabel").textContent = myTurn ? "Your claim" : "Next claim";
-    $("claimRank").textContent = RANKS[v.rankIndex];
-    $("claimName").textContent = RANK_NAMES[v.rankIndex];
+    if (v.lock && !v.roundOver) {
+        $("claimRank").textContent = RANKS[v.lock.rankIndex];
+        $("claimName").textContent = RANK_NAMES[v.lock.rankIndex];
+    } else if (v.lock && v.roundOver) {
+        $("claimRank").textContent = "Done";
+        $("claimName").textContent = "Round complete";
+    } else {
+        $("claimRank").textContent = "Open";
+        $("claimName").textContent = "Leader picks";
+    }
     $("table").hidden = over;
+
+    // recent moves
+    const feed = $("feed");
+    feed.innerHTML = "";
+    if (!over) v.log.forEach((e) => { const t = feedLine(e); if (t) feed.appendChild(el("li", "", t)); });
 
     const last = $("lastPlay");
     if (over) {
         last.textContent = role === "host" ? "" : "Waiting for the host to start another game.";
         if (v.endReason === "left" && v.winner !== null) last.textContent = "Everyone else left the room.";
-    } else if (v.lastPlay) {
-        last.textContent = `${who(v.lastPlay.by)} played ${plural(v.lastPlay.count, "card")} as ${RANK_NAMES[v.lastPlay.rankIndex]}.`;
+    } else if (v.roundOver && v.lastPlay && v.lastPlay.by !== v.you) {
+        last.textContent = "Last chance to call bluff before the pile burns.";
     } else {
         last.textContent = "";
     }
 
     renderResult();
+    renderDeclare(m);
     renderHand();
-    renderActions();
+    renderActions(m);
 }
 
 function renderResult() {
@@ -431,8 +563,17 @@ function renderResult() {
     $("resultTitle").textContent = outcome;
 
     let detail = `${who(r.loser)} ${verb(r.loser, "pick", "picks")} up the pile (${plural(r.picked, "card")}).`;
-    if (v.phase === "playing") detail += ` ${who(v.turn)} ${verb(v.turn, "start", "starts")} the next round.`;
+    if (v.phase === "playing") detail += ` ${who(v.starter)} ${verb(v.starter, "lead", "leads")} the next round.`;
     $("resultDetail").textContent = detail;
+}
+
+function renderDeclare(m) {
+    const box = $("declare");
+    box.hidden = !m.declaring;
+    if (!m.declaring) { declRank = null; return; }
+    [...$("rankPick").children].forEach((b) => {
+        b.setAttribute("aria-checked", Number(b.dataset.rank) === declRank ? "true" : "false");
+    });
 }
 
 function renderHand() {
@@ -463,22 +604,34 @@ function renderHand() {
     $("handLabel").hidden = v.hand.length === 0 && v.phase === "over";
 }
 
-function renderActions() {
+function renderActions(m) {
     const v = view;
     const over = v.phase === "over";
-    const myTurn = !over && v.turn === v.you;
     const n = selected.size;
     const isHost = role === "host";
 
     $("callBtn").hidden = over;
-    $("playBtn").hidden = over || (myTurn && v.pendingWin !== null);
-    $("acceptBtn").hidden = !(myTurn && v.pendingWin !== null);
+    $("passBtn").hidden = over || m.declaring;
+    $("playBtn").hidden = over || m.letStand;
     $("againBtn").hidden = !(over && isHost);
     $("gameActions").hidden = over && !isHost;
 
-    $("callBtn").disabled = !(myTurn && v.lastPlay);
-    $("playBtn").disabled = !(myTurn && n > 0);
-    $("playBtn").textContent = n > 0 ? `Play ${plural(n, "card")} as ${RANK_NAMES[v.rankIndex]}` : "Play cards";
+    $("callBtn").disabled = !m.canCall;
+    $("passBtn").textContent = m.letStand ? "Let it stand" : "Pass";
+    $("passBtn").disabled = !(m.following || m.letStand);
+
+    let label = "Play cards";
+    let ready = false;
+    if (m.declaring) {
+        ready = n > 0 && declRank !== null;
+        if (n > 0 && declRank !== null) label = `Play ${plural(n, "card")} as ${RANK_NAMES[declRank]}`;
+        else if (n > 0) label = "Choose a rank";
+    } else if (m.following) {
+        ready = n > 0;
+        if (n > 0) label = `Play ${plural(n, "card")} as ${RANK_NAMES[v.lock.rankIndex]}`;
+    }
+    $("playBtn").disabled = !ready;
+    $("playBtn").textContent = label;
 }
 
 /* =====================================================================
@@ -486,41 +639,73 @@ function renderActions() {
    ===================================================================== */
 function setPlayError(message) { $("playError").textContent = message || ""; }
 
+function selectionCap() {
+    return RULES.maxCards || Infinity;
+}
+
 function toggleCard(id) {
     setPlayError("");
-    if (selected.has(id)) selected.delete(id);
-    else if (selected.size >= RULES.maxCards) { setPlayError(`You can play up to ${RULES.maxCards} cards at once.`); return; }
-    else selected.add(id);
-    renderHand();
-    renderActions();
+    if (selected.has(id)) {
+        selected.delete(id);
+    } else {
+        const cap = selectionCap();
+        if (selected.size >= cap) {
+            setPlayError(`You can play up to ${cap} cards at once.`);
+            return;
+        }
+        selected.add(id);
+        if (declRank === null && view && modeOf(view).declaring) declRank = cardRank(id);
+    }
+    if (view) { const m = modeOf(view); renderDeclare(m); renderHand(); renderActions(m); }
 }
 
 function act(type, payload) {
     setPlayError("");
     if (role === "host") {
         let res;
-        if (type === "play") res = applyPlay(0, payload.cards);
+        if (type === "play") res = applyPlay(0, payload.cards, payload.rankIndex);
+        else if (type === "pass") res = applyPass(0);
         else if (type === "call") res = applyCall(0);
-        else if (type === "accept") res = applyAccept(0);
-        if (!res || !res.ok) { setPlayError(res ? res.error : ""); return; }
+        if (!res || !res.ok) { setPlayError(res ? res.error : ""); return false; }
         broadcast();
-    } else if (conn && conn.open) {
-        conn.send(Object.assign({ type }, payload));
+        return true;
     }
+    if (conn && conn.open) conn.send(Object.assign({ type }, payload));
+    return true;
 }
 
 $("playBtn").addEventListener("click", () => {
     const cards = [...selected];
     if (!cards.length) return;
-    selected.clear();
-    act("play", { cards });
+    const rankIndex = view && modeOf(view).declaring ? declRank : undefined;
+    // The selection is kept until the new state arrives (cards that left the hand are pruned
+    // then), so a rejected play such as "hold on" doesn't lose it.
+    act("play", { cards, rankIndex });
+    if (view) { const m = modeOf(view); renderDeclare(m); renderHand(); renderActions(m); }
 });
 $("callBtn").addEventListener("click", () => act("call"));
-$("acceptBtn").addEventListener("click", () => act("accept"));
+$("passBtn").addEventListener("click", () => act("pass"));
+
+// Rank picker (built once)
+RANKS.forEach((label, i) => {
+    const b = el("button", "rank-btn", label);
+    b.type = "button";
+    b.dataset.rank = i;
+    b.setAttribute("role", "radio");
+    b.setAttribute("aria-checked", "false");
+    b.setAttribute("aria-label", RANK_NAMES[i]);
+    b.addEventListener("click", () => {
+        declRank = i;
+        setPlayError("");
+        if (view) { const m = modeOf(view); renderDeclare(m); renderActions(m); }
+    });
+    $("rankPick").appendChild(b);
+});
 
 $("againBtn").addEventListener("click", () => {
     if (role !== "host" || !game) return;
     selected.clear();
+    declRank = null;
     playAgain();
     broadcast();
 });
@@ -529,6 +714,7 @@ $("startBtn").addEventListener("click", () => {
     if (role !== "host" || !game || game.phase !== "lobby") return;
     if (activePlayers().length < RULES.minPlayers) return;
     selected.clear();
+    declRank = null;
     dealGame();
     broadcast();
 });
@@ -541,7 +727,7 @@ function teardown() {
     const guestConn = conn, hostConns = [...conns.values()], p = peer;
     conn = null; peer = null; role = null; game = null; view = null; shown = null;
     conns.clear();
-    nextPid = 1; hostAttempts = 0; roomCode = ""; handKey = "";
+    nextPid = 1; hostAttempts = 0; roomCode = ""; handKey = ""; declRank = null;
     selected.clear();
 
     if (guestConn) { try { guestConn.close(); } catch (e) {} }
@@ -656,9 +842,9 @@ function onHostMessage(c, msg) {
     if (pid === undefined) return;
 
     let res = null;
-    if (msg.type === "play") res = applyPlay(pid, msg.cards);
+    if (msg.type === "play") res = applyPlay(pid, msg.cards, msg.rankIndex);
+    else if (msg.type === "pass") res = applyPass(pid);
     else if (msg.type === "call") res = applyCall(pid);
-    else if (msg.type === "accept") res = applyAccept(pid);
     else return;
 
     if (res.ok) broadcast();
