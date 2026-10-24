@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#0f1311">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#1b2528">
     <title>Bluff · Online</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="bluff.css">
@@ -80,50 +80,108 @@
         </div>
     </section>
 
-    <!-- GAME -->
-    <section id="gameView" class="panel step" hidden>
-        <div class="room-row">
-            <p class="eyebrow" id="roomLine"></p>
-            <button type="button" class="link-btn" data-leave>Leave</button>
-        </div>
-        <h2 tabindex="-1" id="statusLine" role="status" aria-live="polite"></h2>
+    <!-- GAME: a full-screen card table -->
+    <section id="gameView" class="gv step" hidden>
+        <div class="tv" id="tv">
 
-        <ul class="seats" id="seats" aria-label="Players"></ul>
+            <header class="tv-bar">
+                <button type="button" class="round-btn" id="leaveBtn" aria-label="Leave game">
+                    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+                <p class="room-chip" id="roomLine"></p>
+            </header>
 
-        <dl class="table" id="table">
-            <div>
-                <dt>Pile</dt>
-                <dd><span class="pile-art" id="pileArt" aria-hidden="true"></span><span id="pileCount">0</span></dd>
+            <!-- opponents along the top edge -->
+            <div class="opps opps-top" id="oppTop" aria-label="Players"></div>
+
+            <div class="tv-mid">
+                <!-- opponents on the left and right edges -->
+                <div class="opps opps-left" id="oppLeft"></div>
+                <div class="opps opps-right" id="oppRight"></div>
+
+                <div class="center" id="center">
+                    <svg class="dir" viewBox="0 0 240 240" aria-hidden="true">
+                        <path d="M33.5 88.5 A92 92 0 0 1 151.5 33.5" fill="none" stroke="currentColor" stroke-width="10" stroke-linecap="round"/>
+                        <path d="M158.1 35.9 L149.1 40.1 L153.9 26.9 Z" fill="currentColor" stroke="currentColor" stroke-width="8" stroke-linejoin="round"/>
+                        <path d="M206.5 151.5 A92 92 0 0 1 88.5 206.5" fill="none" stroke="currentColor" stroke-width="10" stroke-linecap="round"/>
+                        <path d="M81.9 204.1 L90.9 199.9 L86.1 213.1 Z" fill="currentColor" stroke="currentColor" stroke-width="8" stroke-linejoin="round"/>
+                    </svg>
+
+                    <div class="center-row">
+                        <div class="pile-wrap">
+                            <div class="pile empty" id="pile" aria-hidden="true"></div>
+                            <p class="pile-count" id="pileCount">Empty</p>
+                        </div>
+                        <div class="claim">
+                            <div class="claim-card dim" id="claimCard"><span id="claimRank">?</span></div>
+                            <p class="claim-name" id="claimName"></p>
+                        </div>
+                    </div>
+
+                    <div class="caption" id="resultBox" role="status" hidden>
+                        <p class="caption-title" id="resultTitle"></p>
+                        <p class="caption-detail" id="resultDetail"></p>
+                    </div>
+                    <p class="caption caption-note" id="lastPlay"></p>
+                </div>
             </div>
-            <div>
-                <dt id="claimLabel">This round</dt>
-                <dd><span class="claim-rank" id="claimRank"></span><span class="claim-name" id="claimName"></span></dd>
+
+            <div class="tv-bottom">
+                <h2 class="status" tabindex="-1" id="statusLine" role="status" aria-live="polite"></h2>
+                <ul class="feed sr-only" id="feed" aria-label="Recent moves"></ul>
+
+                <div id="declare" class="declare" hidden>
+                    <h3 class="declare-label" id="rankLabel">Declare a rank</h3>
+                    <div class="rankpick" id="rankPick" role="radiogroup" aria-labelledby="rankLabel"></div>
+                </div>
+
+                <div class="hand" id="hand" role="group" aria-label="Your hand">
+                    <div class="hand-in" id="handIn"></div>
+                </div>
+                <p class="error" id="playError" role="alert"></p>
+
+                <div class="dock" id="gameActions">
+                    <button type="button" class="btn btn-primary dock-play" id="playBtn">Play cards</button>
+                    <div class="dock-row">
+                        <button type="button" class="btn btn-call" id="callBtn" title="Call bluff on the last play">
+                            <span class="call-fill" id="callFill" aria-hidden="true"></span>
+                            <span class="call-text">Call bluff</span>
+                        </button>
+                        <div class="me" id="me">
+                            <span class="avatar" id="meAvatar" aria-hidden="true"></span>
+                            <span class="me-name" id="meName"></span>
+                            <span class="me-count" id="handLabel"></span>
+                        </div>
+                        <button type="button" class="btn btn-ghost" id="passBtn">Pass</button>
+                    </div>
+                </div>
             </div>
-        </dl>
-        <ul class="feed" id="feed" aria-label="Recent moves"></ul>
-        <p class="last-play" id="lastPlay"></p>
-
-        <div class="result" id="resultBox" hidden>
-            <h3 class="result-label" id="resultLabel"></h3>
-            <p class="result-names" id="resultTitle"></p>
-            <div class="reveal" id="resultCards"></div>
-            <p class="result-detail" id="resultDetail"></p>
         </div>
 
-        <div id="declare" hidden>
-            <h3 class="section-label" id="rankLabel">Declare a rank</h3>
-            <div class="rankpick" id="rankPick" role="radiogroup" aria-labelledby="rankLabel"></div>
+        <!-- animation layers (never interactive) -->
+        <div class="stage" id="stage" aria-hidden="true" hidden>
+            <p class="stage-claim" id="stageClaim"></p>
+            <div class="stage-row" id="stageRow"></div>
+            <p class="stage-verdict" id="stageVerdict"></p>
+            <p class="stage-sub" id="stageSub"></p>
         </div>
+        <div class="shout" id="shout" aria-hidden="true" hidden>
+            <span class="shout-text" id="shoutText">Bluff!</span>
+            <span class="shout-sub" id="shoutSub"></span>
+        </div>
+        <div class="fx" id="fx" aria-hidden="true"></div>
 
-        <h3 class="section-label" id="handLabel">Your hand</h3>
-        <div class="hand" id="hand" role="group" aria-labelledby="handLabel"></div>
-        <p class="error" id="playError" role="alert"></p>
-
-        <div class="actions" id="gameActions">
-            <button type="button" class="btn btn-ghost btn-call" id="callBtn">Call bluff</button>
-            <button type="button" class="btn btn-ghost" id="passBtn">Pass</button>
-            <button type="button" class="btn btn-primary" id="playBtn">Play cards</button>
-            <button type="button" class="btn btn-primary" id="againBtn" hidden>Play again</button>
+        <!-- game over -->
+        <div class="over" id="overBox" hidden>
+            <div class="over-card">
+                <p class="over-label" id="overLabel">Winner</p>
+                <p class="over-title" id="overTitle"></p>
+                <p class="over-detail" id="overDetail"></p>
+                <div class="over-actions">
+                    <button type="button" class="btn btn-ghost" data-leave>Leave</button>
+                    <button type="button" class="btn btn-primary" id="againBtn" hidden>Play again</button>
+                </div>
+            </div>
         </div>
     </section>
 </div>
