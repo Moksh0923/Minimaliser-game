@@ -312,16 +312,17 @@ body.in-game .topbar { display: none; }
 }
 .claim-name { color: var(--score); }
 
+/* The claim card is a real playing card too: white face, red or black rank. */
 .claim-card {
     display: grid;
     place-items: center;
     width: var(--pw);
     height: calc(var(--pw) * 1.42);
-    color: #231b08;
-    background: linear-gradient(160deg, #e8c97d 0%, #c29a43 100%);
-    border: calc(var(--pw) * 0.055) solid var(--cream);
+    color: #1b1b1f;
+    background: #fdfcf8;
+    border: calc(var(--pw) * 0.03) solid #fdfcf8;
     border-radius: calc(var(--pw) * 0.15);
-    box-shadow: 0 8px 18px -8px rgba(0, 0, 0, 0.7);
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35), 0 8px 18px -8px rgba(0, 0, 0, 0.7);
     transition: background 0.3s;
 }
 .claim-card span {
@@ -330,14 +331,18 @@ body.in-game .topbar { display: none; }
     width: 72%;
     aspect-ratio: 1 / 1.08;
     font: 800 calc(var(--pw) * 0.5)/1 var(--serif);
-    background: var(--cream);
+    color: #b3261e;
+    background: #f3e7c3;
+    border: calc(var(--pw) * 0.025) solid #c29a43;
     border-radius: 50%;
 }
 .claim-card.dim {
     color: #8e9c97;
     background: #35454a;
+    border-color: #35454a;
+    box-shadow: none;
 }
-.claim-card.dim span { background: rgba(255, 255, 255, 0.08); font-size: calc(var(--pw) * 0.34); }
+.claim-card.dim span { color: #8e9c97; background: rgba(255, 255, 255, 0.08); border-color: transparent; font-size: calc(var(--pw) * 0.34); }
 .claim-card.pop { animation: pop 0.4s cubic-bezier(0.2, 1.3, 0.4, 1); }
 @keyframes pop {
     0% { transform: scale(0.7); }
@@ -396,11 +401,16 @@ body.in-game .topbar { display: none; }
 .rank-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .rank-btn[aria-checked="true"] { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); transform: scale(1.08); }
 
-/* ---------- cards ---------- */
+/* =====================================================================
+   CARDS: a classic playing-card deck
+   White face, red hearts/diamonds, black spades/clubs, a rank and suit in two
+   opposite corners, pips laid out like a real deck (2-10), a big centre pip on the
+   Ace and a framed panel on J, Q, K.
+   ===================================================================== */
 .card {
     --u: var(--cw, 3.4rem);
-    --bw: max(2px, calc(var(--u) * 0.055));
-    --suit: #2c3d5c;
+    --bw: max(1px, calc(var(--u) * 0.03));
+    --suit: #1b1b1f;                       /* ink colour for this suit */
     position: relative;
     display: inline-block;
     flex: none;
@@ -408,57 +418,107 @@ body.in-game .topbar { display: none; }
     height: calc(var(--u) * 1.42);
     padding: 0;
     margin: 0;
-    font-family: var(--sans);
+    font-family: var(--serif);
     line-height: 1;
-    color: #fff;
-    background: var(--suit);
-    border: var(--bw) solid var(--cream);
+    color: var(--suit);
+    background: #fdfcf8;
+    border: var(--bw) solid #fdfcf8;
     border-radius: calc(var(--u) * 0.15);
-    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.4), 0 6px 12px -6px rgba(0, 0, 0, 0.65);
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.38), 0 6px 12px -6px rgba(0, 0, 0, 0.65);
     -webkit-appearance: none;
     appearance: none;
     user-select: none;
+    overflow: hidden;
 }
 
-/* four-colour deck: suits read at a glance even when cards overlap */
-.card.s0 { --suit: #2c3d5c; }   /* spades   */
-.card.s1 { --suit: #c4453a; }   /* hearts   */
-.card.s2 { --suit: #cc8420; }   /* diamonds */
-.card.s3 { --suit: #2f7f55; }   /* clubs    */
+.card.s0, .card.s3 { --suit: #17171b; }   /* spades, clubs: black */
+.card.s1, .card.s2 { --suit: #c8201f; }   /* hearts, diamonds: red */
 
-.c-rank {
+/* rank + suit stacked in a corner; the bottom-right one is the same turned upside down */
+.c-corner {
     position: absolute;
-    top: calc(var(--u) * 0.06);
-    left: calc(var(--u) * 0.1);
-    font-size: calc(var(--u) * 0.3);
+    top: calc(var(--u) * 0.055);
+    left: calc(var(--u) * 0.06);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: calc(var(--u) * 0.26);
+    line-height: 1;
+}
+.c-corner.br {
+    top: auto;
+    left: auto;
+    right: calc(var(--u) * 0.06);
+    bottom: calc(var(--u) * 0.055);
+    transform: rotate(180deg);
+}
+.c-rank {
+    font-size: calc(var(--u) * 0.27);
     font-weight: 800;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.06em;
 }
 .c-suit {
-    position: absolute;
-    top: calc(var(--u) * 0.4);
-    left: calc(var(--u) * 0.09);
-    font-size: calc(var(--u) * 0.24);
+    margin-top: calc(var(--u) * 0.015);
+    font-size: calc(var(--u) * 0.22);
 }
-.c-mid {
+
+/* pip field: pips sit at percentage positions, those in the lower half are turned over */
+.c-pips {
     position: absolute;
-    left: 50%;
-    top: 62%;
+    left: 27%;
+    right: 27%;
+    top: 13%;
+    bottom: 13%;
+}
+.pip {
+    position: absolute;
+    font-size: calc(var(--u) * 0.24);
+    line-height: 1;
+    transform: translate(-50%, -50%);
+}
+.pip.down { transform: translate(-50%, -50%) rotate(180deg); }
+.pip.ace { font-size: calc(var(--u) * 0.62); }
+
+/* J, Q, K: framed court panel */
+.c-face {
+    position: absolute;
+    left: 24%;
+    right: 24%;
+    top: 12%;
+    bottom: 12%;
     display: grid;
     place-items: center;
-    width: 60%;
-    aspect-ratio: 1 / 1.1;
-    font: 800 calc(var(--u) * 0.36)/1 var(--serif);
+    background:
+            linear-gradient(135deg, transparent 49.2%, rgba(0, 0, 0, 0.18) 49.2% 50.8%, transparent 50.8%),
+            linear-gradient(160deg, #f6e7b4 0%, #e3c777 100%);
+    border: max(1px, calc(var(--u) * 0.025)) solid var(--suit);
+    border-radius: calc(var(--u) * 0.05);
+}
+.c-face-letter {
+    font-size: calc(var(--u) * 0.44);
+    font-weight: 800;
     color: var(--suit);
-    background: var(--cream);
-    border-radius: 50%;
-    transform: translate(-50%, -50%);
+}
+.c-face-suit {
+    position: absolute;
+    left: calc(var(--u) * 0.03);
+    top: calc(var(--u) * 0.02);
+    font-size: calc(var(--u) * 0.17);
+}
+.c-face-suit.br {
+    left: auto;
+    top: auto;
+    right: calc(var(--u) * 0.03);
+    bottom: calc(var(--u) * 0.02);
+    transform: rotate(180deg);
 }
 
 .card.back {
+    --bw: max(2px, calc(var(--u) * 0.055));
     background:
             repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.06) 0 2px, transparent 2px 8px),
             var(--back, #3b3150);
+    border-color: #fdfcf8;
 }
 .card.back > * { display: none; }
 .card.back::after {

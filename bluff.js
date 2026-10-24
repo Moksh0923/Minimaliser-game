@@ -21,7 +21,9 @@
    ANIMATION: the host stamps every action with a numbered event (deal, play, pass, call,
    burn). Every device receives the latest few events inside its view, and plays each one it
    hasn't seen yet. Animations are purely cosmetic; the table underneath is always drawn
-   straight from the state. */
+   straight from the state.
+
+   CARD LOOK: cards are drawn like a classic playing-card deck (see cardEl and PIPS). */
 
 const RULES = {
     minPlayers: 2,
@@ -413,14 +415,56 @@ function plural(n, word) { return `${n} ${word}${n === 1 ? "" : "s"}`; }
 
 function cardLabel(id) { return `${RANK_SINGULAR[cardRank(id)]} of ${SUIT_NAMES[cardSuit(id)]}`; }
 
+/* ---------- the deck: classic playing-card faces ----------
+   Pip positions are [x, y] inside the pip field, where x is 0 (left) / 0.5 / 1 (right)
+   and y runs 0 (top) to 1 (bottom). Pips in the lower half are turned upside down, exactly
+   like a printed deck. Index 0 is the Ace, 1 is the Two ... 9 is the Ten. */
+const PIPS = [
+    [[0.5, 0.5]],                                                                       // A (drawn large)
+    [[0.5, 0], [0.5, 1]],                                                               // 2
+    [[0.5, 0], [0.5, 0.5], [0.5, 1]],                                                   // 3
+    [[0, 0], [1, 0], [0, 1], [1, 1]],                                                   // 4
+    [[0, 0], [1, 0], [0.5, 0.5], [0, 1], [1, 1]],                                       // 5
+    [[0, 0], [1, 0], [0, 0.5], [1, 0.5], [0, 1], [1, 1]],                               // 6
+    [[0, 0], [1, 0], [0.5, 0.25], [0, 0.5], [1, 0.5], [0, 1], [1, 1]],                  // 7
+    [[0, 0], [1, 0], [0.5, 0.25], [0, 0.5], [1, 0.5], [0.5, 0.75], [0, 1], [1, 1]],     // 8
+    [[0, 0], [1, 0], [0, 0.333], [1, 0.333], [0.5, 0.5], [0, 0.667], [1, 0.667], [0, 1], [1, 1]],   // 9
+    [[0, 0], [1, 0], [0.5, 0.1667], [0, 0.333], [1, 0.333], [0, 0.667], [1, 0.667], [0.5, 0.8333], [0, 1], [1, 1]]  // 10
+];
+
 function cardEl(id, kind, extra) {
+    const rank = cardRank(id);
+    const suitChar = SUITS[cardSuit(id)] + "︎";      // text (not emoji) presentation
     const node = el(kind === "button" ? "button" : "span", `card s${cardSuit(id)}` + (extra ? " " + extra : ""));
     if (kind === "button") node.type = "button";
-    node.append(
-            el("span", "c-rank", RANKS[cardRank(id)]),
-            el("span", "c-suit", SUITS[cardSuit(id)] + "︎"),
-            el("span", "c-mid", RANKS[cardRank(id)])
-    );
+
+    // rank and suit in opposite corners
+    const corner = (cls) => {
+        const c = el("span", "c-corner" + (cls ? " " + cls : ""));
+        c.append(el("span", "c-rank", RANKS[rank]), el("span", "c-suit", suitChar));
+        return c;
+    };
+    node.append(corner(""), corner("br"));
+
+    if (rank >= 10) {                                   // J, Q, K: framed court panel
+        const face = el("span", "c-face");
+        face.append(
+                el("span", "c-face-suit", suitChar),
+                el("span", "c-face-letter", RANKS[rank]),
+                el("span", "c-face-suit br", suitChar)
+        );
+        node.appendChild(face);
+    } else {                                            // A to 10: pips
+        const field = el("span", "c-pips");
+        PIPS[rank].forEach(([x, y]) => {
+            const p = el("span", "pip" + (rank === 0 ? " ace" : "") + (y > 0.5 ? " down" : ""), suitChar);
+            p.style.left = `${x * 100}%`;
+            p.style.top = `${y * 100}%`;
+            field.appendChild(p);
+        });
+        node.appendChild(field);
+    }
+
     node.setAttribute(kind === "button" ? "aria-label" : "title", cardLabel(id));
     return node;
 }
